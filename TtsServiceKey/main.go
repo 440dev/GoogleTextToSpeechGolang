@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"golang.org/x/oauth2"
 	"fmt"
-	"bufio"
 	"os"
 	"net/http"
 	"bytes"
@@ -12,19 +10,17 @@ import (
 	"encoding/base64"
 	"context"
 	"google.golang.org/api/texttospeech/v1beta1"
+	"golang.org/x/oauth2/google"
 )
 
 const (
-	TEXT = "こんにちは！"
+	TEXT = "こんにちは！こちらは認証キーを使ったパターンです"
 	GENDER = "FEMALE"
 	LANGUAGE = "ja-JP"
 	VOICENAME = "ja-JP-Standard-A"
 
 	AUDIO_ENCODE = "LINEAR16"
 	SPEAKING_RATE = 1
-
-	CLIENT_ID = " Your Client ID "
-	SECRET_KEY = " Your Secret KEY "
 
 	OUTPUT = "output.mp3"
 )
@@ -44,35 +40,13 @@ func main(){
 	payload, _ := json.Marshal(synthesizeSpeechRequest)
 
 	ctx := context.Background()
-	config := oauth2.Config{
-		ClientID:CLIENT_ID,
-		ClientSecret:SECRET_KEY,
-		Endpoint:oauth2.Endpoint{
-			AuthURL:  "https://accounts.google.com/o/oauth2/auth",
-			TokenURL: "https://accounts.google.com/o/oauth2/token",
-		},
-		RedirectURL:"urn:ietf:wg:oauth:2.0:oob",
-		Scopes: []string{"https://www.googleapis.com/auth/cloud-platform"},
-	}
 
-	url := config.AuthCodeURL("")
-	fmt.Println("Get authorize code:", url)
-	fmt.Print("Input code:")
-
-	var s string
-	var sc = bufio.NewScanner(os.Stdin)
-	if sc.Scan(){
-		s = sc.Text()
-	}
-
-	token, err := config.Exchange(ctx, s)
-	if err != nil {
+	b, err := ioutil.ReadFile("TextSpeech.json")
+	if err != nil{
 		panic(err)
-		return
 	}
-
-	client := config.Client(ctx, token)
-
+	config, err := google.JWTConfigFromJSON(b, texttospeech.CloudPlatformScope)
+	client := config.Client(ctx)
 	req, err := http.NewRequest(
 		"POST",
 		"https://texttospeech.googleapis.com/v1beta1/text:synthesize",
